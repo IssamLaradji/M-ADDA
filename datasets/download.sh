@@ -1,0 +1,1 @@
+wget -O usps_28x28.pkl https://www.dropbox.com/s/vwyrepbrgdie3ma/usps_28x28.pkl?dl=0
