@@ -13,7 +13,6 @@ import torch.utils.data as data
 from torchvision import transforms
 
 
-
 class USPS(data.Dataset):
     def __init__(self, root, split, transform=None, download=False):
         """Init USPS dataset."""
@@ -49,13 +48,6 @@ class USPS(data.Dataset):
         self.y = torch.LongTensor(self.y)
 
     def __getitem__(self, index):
-        """Get images and target for data loader.
-
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is index of the target class.
-        """
         img, label = self.X[index].clone(), self.y[index].clone()
         
         if self.transform is not None:
@@ -64,11 +56,9 @@ class USPS(data.Dataset):
         return img, label
 
     def __len__(self):
-        """Return size of dataset."""
         return self.dataset_size
 
     def load_samples(self):
-        """Load sample images from dataset."""
         filename = os.path.join(self.root, self.filename)
         f = gzip.open(filename, "rb")
         data_set = pickle.load(f, encoding="bytes")

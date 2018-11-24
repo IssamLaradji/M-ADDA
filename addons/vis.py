@@ -109,11 +109,11 @@ def visEmbed(exp_dict):
                         exp_dict["options"]["center"], exp_dict["options"]["disc"])
         plt.title(title)
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig("/mnt/home/issam/Summaries/src_{}.pdf".format(exp_dict["exp_name"].replace(" ","")),
+        plt.savefig("src_{}.pdf".format(exp_dict["exp_name"].replace(" ","")),
                 bbox_inches='tight', 
                transparent=False)
 
-        plt.savefig("/mnt/home/issam/Summaries/src_{}.png".format(exp_dict["exp_name"]),
+        plt.savefig("src_{}.png".format(exp_dict["exp_name"]),
                 bbox_inches='tight', 
                transparent=False)
         # ms.visplot(fig)
@@ -142,11 +142,11 @@ def visEmbed(exp_dict):
                         exp_dict["options"]["center"], exp_dict["options"]["disc"])
         plt.title(title)
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig("/mnt/home/issam/Summaries/tgt_{}.pdf".format(exp_dict["exp_name"]),
+        plt.savefig("tgt_{}.pdf".format(exp_dict["exp_name"]),
                 bbox_inches='tight', 
                transparent=False)
 
-        plt.savefig("/mnt/home/issam/Summaries/tgt_{}.png".format(exp_dict["exp_name"]),
+        plt.savefig("tgt_{}.png".format(exp_dict["exp_name"]),
                 bbox_inches='tight', 
                transparent=False)
         # ms.visplot(fig)
@@ -248,7 +248,7 @@ def scatter_source(src_model, tgt_model, src_loader,
     plt.scatter(X[:,0], X[:,1], s=8.0, color="C0")
     plt.grid(True)
     plt.rc('grid', linestyle="--", color='grey')
-    plt.savefig("/mnt/home/issam/Summaries/{}.pdf".format(fname))
+    plt.savefig("{}.pdf".format(fname))
     plt.close()
 
 def scatter_target(src_model, tgt_model, src_loader, 
@@ -261,5 +261,5 @@ def scatter_target(src_model, tgt_model, src_loader,
     plt.scatter(Y[:,0], Y[:,1], s=8.0, color="C1")
     plt.grid(True)
     plt.rc('grid', linestyle="--", color='grey')
-    plt.savefig("/mnt/home/issam/Summaries/{}.pdf".format(fname))
+    plt.savefig("{}.pdf".format(fname))
     plt.close()

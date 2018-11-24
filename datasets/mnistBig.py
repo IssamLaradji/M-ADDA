@@ -1,16 +1,7 @@
-
-import gzip
-import os
-import pickle
-import urllib
-
 import numpy as np
 import torch
 import torch.utils.data as data
 from torchvision import datasets, transforms
-
-from torchvision import datasets
-from torch.utils.data import Dataset
 
 class MNIST(data.Dataset):
    
@@ -22,9 +13,8 @@ class MNIST(data.Dataset):
       if split == "train":
 
 
-        train_dataset = datasets.MNIST('/mnt/datasets/public/issam/MNIST',
-                                train=True, download=True,
-                               transform=None)
+        train_dataset = datasets.MNIST(train=True, download=True,
+                                       transform=None)
         self.X = train_dataset.train_data.float() / 255.
         self.y = train_dataset.train_labels
         
@@ -32,10 +22,10 @@ class MNIST(data.Dataset):
         ind = np.random.choice(len(train_dataset), len(train_dataset), replace=False)
         self.X = self.X[ind]
         self.y = self.y[ind]
-      elif split == "val":
 
-        test_dataset = datasets.MNIST('/mnt/datasets/public/issam/MNIST', train=False, download=True,
-                               transform=None)
+      elif split == "val":
+        test_dataset = datasets.MNIST(train=False, download=True,
+                                      transform=None)
 
         self.X = test_dataset.test_data.float() / 255.
         self.y = test_dataset.test_labels

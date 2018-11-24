@@ -194,18 +194,7 @@ def get_experiment_dict(args, exp_name):
                         }
 
         exp_dict["exp_name"] = exp_name
-
         exp_dict["path"]="checkpoints/{}/".format(exp_name)
-
-        # exp_dict["path"]="/mnt/home/issam/Saves/" \
-        #                     "DA/{}_{}_{}_{}_{}_{}_{}_{}/".format(exp_dict["src_dataset"], 
-        #                                              exp_dict["src_model"],
-        #                                              exp_dict["src_batch_size"],
-        #                                              exp_dict["n_outputs"],
-        #                                              exp_dict["tgt_dataset"], 
-        #                                              exp_dict["tgt_model"],
-        #                                              exp_dict["tgt_batch_size"],
-        #                                              str(exp_dict["options"]).replace(" ",""))
-        exp_dict["summary_path"] = "/mnt/home/issam/Summaries/"
+        exp_dict["summary_path"] = ""
 
         return exp_dict

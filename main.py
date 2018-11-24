@@ -73,9 +73,7 @@ if __name__ == '__main__':
       history = ms.load_history(exp_dict)
 
       # Main options
-      if args.mode == "test_model":
-        import ipdb; ipdb.set_trace()  # breakpoint d242132a //
-        
+      if args.mode == "test_model":        
         results[exp_name] = ms.test_latest_model(exp_dict, verbose=0)
 
 
@@ -84,7 +82,7 @@ if __name__ == '__main__':
 
 
       if args.mode == "copy_models":
-        results[exp_name] = ms.copy_models(exp_dict, path_dst="/mnt/home/issam/Summaries/{}/".format(exp_name))
+        results[exp_name] = ms.copy_models(exp_dict, path_dst="{}/".format(exp_name))
 
 
       # MISC
@@ -134,8 +132,6 @@ if __name__ == '__main__':
           results[exp_name] = summary.max()
         except:
           print("{} skipped...".format(exp_name))
-
-    import ipdb; ipdb.set_trace()  # breakpoint be2b69b4 //
 
     print(pd.Series(results))
     # Train Source

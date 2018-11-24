@@ -47,13 +47,6 @@ class USPS(data.Dataset):
         self.y = torch.LongTensor(self.y)
 
     def __getitem__(self, index):
-        """Get images and target for data loader.
-
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is index of the target class.
-        """
         img, label = self.X[index].clone(), self.y[index].clone()
         
         if self.transform is not None:
@@ -62,7 +55,6 @@ class USPS(data.Dataset):
         return img, label
 
     def __len__(self):
-        """Return size of dataset."""
         return self.dataset_size
         
     def load_samples(self):
