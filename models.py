@@ -3,22 +3,18 @@
 from torch import nn
 import torch
 
- 
+
 def get_model(name, n_outputs):
     if name == "lenet":
         model = EmbeddingNet(n_outputs).cuda()
         opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
         return model.cuda(), opt
- 
- 
+
     if name == "disc":
-        model = Discriminator(input_dims=500,
-                                      hidden_dims=500,
-                                      output_dims=2)
+        model = Discriminator(input_dims=500, hidden_dims=500, output_dims=2)
         opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
- 
- 
+
         return model.cuda(), opt
 
 
@@ -32,17 +28,15 @@ class Discriminator(nn.Module):
         self.restored = False
 
         self.layer = nn.Sequential(
-            nn.Linear(input_dims, hidden_dims),
-            nn.ReLU(),
-            nn.Linear(hidden_dims, hidden_dims),
-            nn.ReLU(),
-            nn.Linear(hidden_dims, output_dims)
-        )
+            nn.Linear(input_dims, hidden_dims), nn.ReLU(),
+            nn.Linear(hidden_dims, hidden_dims), nn.ReLU(),
+            nn.Linear(hidden_dims, output_dims))
 
     def forward(self, input):
         """Forward the discriminator."""
         out = self.layer(input)
         return out
+
 
 class EmbeddingNet(nn.Module):
     def __init__(self, n_outputs=128):
@@ -60,16 +54,15 @@ class EmbeddingNet(nn.Module):
             nn.Conv2d(20, 50, kernel_size=5),
             #nn.Dropout2d(),
             nn.MaxPool2d(kernel_size=2),
-            nn.ReLU()
-        )
+            nn.ReLU())
         self.n_classes = 10
         self.n_outputs = n_outputs
-        self.fc = nn.Sequential(nn.Linear(50 * 4 * 4, 500),
-                                nn.ReLU(),
-                                # nn.Linear(512, 256),
-                                # nn.ReLU(),
-                                nn.Linear(500, self.n_outputs)
-                                )
+        self.fc = nn.Sequential(
+            nn.Linear(50 * 4 * 4, 500),
+            nn.ReLU(),
+            # nn.Linear(512, 256),
+            # nn.ReLU(),
+            nn.Linear(500, self.n_outputs))
 
     def extract_features(self, x):
         output = self.convnet(x)

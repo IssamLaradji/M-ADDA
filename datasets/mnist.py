@@ -3,37 +3,36 @@ import torch
 import torch.utils.data as data
 from torchvision import datasets, transforms
 
+
 class MNIST(data.Dataset):
-   
     def __init__(self, split, transform=None):
-      #self.transform = transformers.get_basic_transformer()
-      self.split = split 
-      self.transform = transform
+        #self.transform = transformers.get_basic_transformer()
+        self.split = split
+        self.transform = transform
 
-      if split == "train":
+        if split == "train":
 
+            train_dataset = datasets.MNIST(
+                root="datasets", train=True, download=True, transform=None)
+            self.X = train_dataset.train_data.float() / 255.
+            self.y = train_dataset.train_labels
 
-        train_dataset = datasets.MNIST(train=True, download=True,
-                               transform=None)
-        self.X = train_dataset.train_data.float() / 255.
-        self.y = train_dataset.train_labels
-        
-        np.random.seed(2)
-        ind = np.random.choice(len(train_dataset), 2000, replace=False)
-        self.X = self.X[ind]
-        self.y = self.y[ind]
-        
-      elif split == "val":
+            np.random.seed(2)
+            ind = np.random.choice(len(train_dataset), 2000, replace=False)
+            self.X = self.X[ind]
+            self.y = self.y[ind]
 
-        test_dataset = datasets.MNIST(train=False, download=True,
-                               transform=None)
+        elif split == "val":
 
-        self.X = test_dataset.test_data.float() / 255.
-        self.y = test_dataset.test_labels
+            test_dataset = datasets.MNIST(root="datasets",
+                train=False, download=True, transform=None)
+
+            self.X = test_dataset.test_data.float() / 255.
+            self.y = test_dataset.test_labels
 
     def __getitem__(self, index):
         X, y = self.X[index].clone(), self.y[index].clone()
-        
+
         X = self.transform(X[None])
 
         return X, y
@@ -46,14 +45,11 @@ class MNIST(data.Dataset):
 def get_mnist(split, batch_size=50):
     """Get MNIST dataset loader."""
     # image pre-processing
-    pre_process = transforms.Compose([transforms.Normalize(
-                                          mean=[0.5,0.5,0.5],
-                                          std=[0.5,0.5,0.5])])
-
+    pre_process = transforms.Compose(
+        [transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
 
     # dataset and data loader
-    mnist_dataset = MNIST(split=split,
-                          transform=pre_process)
+    mnist_dataset = MNIST(split=split, transform=pre_process)
 
     mnist_data_loader = torch.utils.data.DataLoader(
         dataset=mnist_dataset,

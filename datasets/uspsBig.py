@@ -17,7 +17,7 @@ class USPS(data.Dataset):
     def __init__(self, root, split, transform=None, download=False):
         """Init USPS dataset."""
         # init params
-        self.split=split
+        self.split = split
         self.root = os.path.expanduser(root)
         self.filename = "usps_28x28.pkl"
 
@@ -26,37 +26,36 @@ class USPS(data.Dataset):
         self.dataset_size = None
 
         self.X, self.y = self.load_samples()
-        if self.split=="train":
+        if self.split == "train":
             total_num_samples = self.y.shape[0]
             indices = np.arange(total_num_samples)
             np.random.shuffle(indices)
             self.X = self.X[indices[0:self.dataset_size], ::]
             self.y = self.y[indices[0:self.dataset_size]]
-            
+
             n_usps = self.y.shape[0]
             np.random.seed(1)
-            ind =  np.random.choice(n_usps, n_usps, replace=False)
+            ind = np.random.choice(n_usps, n_usps, replace=False)
 
             self.X = self.X[ind]
             self.y = self.y[ind]
 
             self.dataset_size = self.y.shape[0]
-        
 
         self.X = torch.FloatTensor(self.X)
         self.y = torch.LongTensor(self.y)
 
     def __getitem__(self, index):
         img, label = self.X[index].clone(), self.y[index].clone()
-        
+
         if self.transform is not None:
             img = self.transform(img)
-        
+
         return img, label
 
     def __len__(self):
         return self.dataset_size
-        
+
     def load_samples(self):
         """Load sample images from dataset."""
         filename = os.path.join(self.root, self.filename)
@@ -77,15 +76,12 @@ class USPS(data.Dataset):
 def get_usps(split, batch_size=50):
     """Get USPS dataset loader."""
     # image pre-processing
-    pre_process = transforms.Compose([transforms.Normalize(
-                                          mean=[0.5,0.5,0.5],
-                                          std=[0.5,0.5,0.5])])
+    pre_process = transforms.Compose(
+        [transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
 
     # dataset and data loader
-    usps_dataset = USPS(root="datasets",
-                        split=split,
-                        transform=pre_process,
-                        download=True)
+    usps_dataset = USPS(
+        root="datasets", split=split, transform=pre_process, download=True)
 
     usps_data_loader = torch.utils.data.DataLoader(
         dataset=usps_dataset,
