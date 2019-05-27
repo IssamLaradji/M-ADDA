@@ -3,8 +3,10 @@ import torch
 import torch.utils.data as data
 from torchvision import datasets, transforms
 
+from dataset_utils import Random_BalancedBatchSampler
 
-class MNIST(data.Dataset):
+
+class COXS2V(data.Dataset):
     def __init__(self, split, transform=None):
         #self.transform = transformers.get_basic_transformer()
         self.split = split
@@ -42,23 +44,36 @@ class MNIST(data.Dataset):
         return self.X.shape[0]
 
 
-def get_mnist(split, batch_size=50):
+def get_coxs2v(split, batch_size=50):
     """Get MNIST dataset loader."""
     # image pre-processing
     # pre_process = transforms.Compose(
     #     [transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
 
-    pre_process = transforms.Compose(
-        [transforms.Normalize(mean=[0.5], std=[0.5])])
+    pre_process = transforms.Compose([
+        #transforms.Resize((160, 160), interpolation=1),
+        transforms.ToTensor()
+    ])
 
-    # dataset and data loader
-    mnist_dataset = MNIST(split=split, transform=pre_process)
+    if split == "train":
+        coxs2v_dataset = datasets.ImageFolder("/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video2",
+                                          transform=pre_process)
 
-    mnist_data_loader = torch.utils.data.DataLoader(
-        dataset=mnist_dataset,
-        batch_size=batch_size,
-        num_workers=0,
-        shuffle=True,
-        drop_last=True)
+    elif split == "val":
+        coxs2v_dataset = datasets.ImageFolder("/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video1",
+                                              transform=pre_process)
 
-    return mnist_data_loader
+    people_per_batch = 20
+    images_per_person = 5
+
+    batch_sampler = Random_BalancedBatchSampler(coxs2v_dataset,
+                                                people_per_batch,
+                                                images_per_person,
+                                                max_batches=1000)
+
+    coxs2v_data_loader = torch.utils.data.DataLoader(coxs2v_dataset,
+                                                     num_workers=4,
+                                                     batch_sampler=batch_sampler,
+                                                     pin_memory=False)
+
+    return coxs2v_data_loader

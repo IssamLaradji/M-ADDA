@@ -160,3 +160,5 @@ if __name__ == '__main__':
         pp_main.fig.savefig(figName, dpi=600)
 
         print("saved {}".format(figName))
+
+# per vedere se ha salvato

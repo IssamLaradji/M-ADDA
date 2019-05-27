@@ -8,7 +8,6 @@ import datasets
 import test
 import os
 
-
 def set_gpu(gpu_id):
     if gpu_id is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % gpu_id
@@ -161,7 +160,13 @@ def load_model_src(exp_dict):
         print("Loading saved {}".format(name_model))
 
     else:
-        print("Loading source models from scratch..")
+        print("Loading source models from scratch...")
+
+    # CUDA for PyTorch
+    # use_cuda = torch.cuda.is_available()
+    # device = torch.device("cuda:0" if use_cuda else "cpu")
+
+    src_model.cuda()
 
     return src_model, src_opt
 

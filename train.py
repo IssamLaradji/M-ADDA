@@ -3,6 +3,9 @@ import misc as ms
 import test
 import torch
 
+
+import pdb
+
 import torch.nn as nn
 import losses
 from sklearn.cluster import KMeans
@@ -98,7 +101,7 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 opt_tgt=tgt_opt,
                 opt_disc=disc_opt,
                 epochs=3,
-                verbose=0)
+                verbose=1)
 
         acc_tgt = test.validate(src_model, tgt_model, src_trainloader,
                                 tgt_valloader)
@@ -221,7 +224,10 @@ def fit_discriminator(src_model,
 
             # optimize target encoder
             opt_tgt.step()
-
+            
+            
+            
+           # pdb.set_trace()
             #######################
             # 2.3 print step info #
             #######################
@@ -256,7 +262,7 @@ def fit_center(src_model,
     src_centers = torch.FloatTensor(src_kmeans.cluster_centers_).cuda()
 
     ####################
-    # 2. train network #
+    # 2. Doing Domain Adaptation#
     ####################
 
     for epoch in range(epochs):
