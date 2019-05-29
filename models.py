@@ -47,7 +47,9 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         """Forward the discriminator."""
+
         out = self.layer(input)
+        #out = out.view(out.size()[0], -1)  per errore RuntimeError: size mismatch, m1: [200 x 128], m2: [500 x 500]
         return out
 
 

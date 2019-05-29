@@ -13,20 +13,22 @@ from sklearn.cluster import KMeans
 
 def train(exp_dict):
     history = ms.load_history(exp_dict)
-
     # Source
     src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
 
     ####################### 1. Train source model
     src_model, src_opt = ms.load_model_src(exp_dict)
-
+    print(src_model.last.bias.shape[0])
     # Train Source
     history = fit_source(src_model, src_opt, src_trainloader, history,
                          exp_dict)
+
+    #src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
+
     # Test Source
     src_acc = test.validate(src_model, src_model, src_trainloader,
                             src_valloader)
-
+    print('Test: validate DONE')
     print("{} TEST Accuracy = {:2%}\n".format(exp_dict["src_dataset"],
                                               src_acc))
     history["src_acc"] = src_acc
@@ -54,6 +56,7 @@ def train(exp_dict):
 
 def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
     # Train Source
+    print( range(history["src_train"][-1]["epoch"], exp_dict["src_epochs"]))
     for e in range(history["src_train"][-1]["epoch"], exp_dict["src_epochs"]):
         loss_sum = 0.
         for step, (images, labels) in enumerate(src_trainloader):
@@ -179,8 +182,8 @@ def fit_discriminator(src_model,
             opt_disc.zero_grad()
 
             # extract and concat features
-            feat_src = src_model.extract_features(images_src)
-            feat_tgt = tgt_model.extract_features(images_tgt)
+            feat_src = src_model.forward(images_src)
+            feat_tgt = tgt_model.forward(images_tgt)
             feat_concat = torch.cat((feat_src, feat_tgt), 0)
 
             # predict on discriminator
@@ -210,7 +213,7 @@ def fit_discriminator(src_model,
             opt_tgt.zero_grad()
 
             # extract and target features
-            feat_tgt = tgt_model.extract_features(images_tgt)
+            feat_tgt = tgt_model.extforward(images_tgt)
 
             # predict on discriminator
             pred_tgt = disc(feat_tgt)
@@ -227,7 +230,7 @@ def fit_discriminator(src_model,
             
             
             
-           # pdb.set_trace()
+            pdb.set_trace()
             #######################
             # 2.3 print step info #
             #######################
@@ -236,6 +239,7 @@ def fit_discriminator(src_model,
                       "d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(
                           epoch + 1, epochs, loss_disc.item(), loss_tgt.item(),
                           acc.item()))
+
 
 
 def fit_center(src_model,
@@ -253,7 +257,10 @@ def fit_center(src_model,
     src_model.train()
     tgt_model.train()
 
+
     src_embeddings, _ = losses.extract_embeddings(src_model, src_loader)
+
+
 
     src_kmeans = KMeans(n_clusters=n_classes)
     src_kmeans.fit(src_embeddings)

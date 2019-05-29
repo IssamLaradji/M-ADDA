@@ -15,6 +15,8 @@ from addons import vis
 from addons import pretty_plot
 import train
 
+#per vedere se salva
+
 if __name__ == '__main__':
 
     # SEE IF CUDA IS AVAILABLE
@@ -51,7 +53,6 @@ if __name__ == '__main__':
         yscale="linear",
         subplots=(1, 1),
         shareRowLabel=True)
-
     for exp_name in args.expList:
         exp_dict = experiments.get_experiment_dict(args, exp_name)
         exp_dict["reset_src"] = args.reset_src
@@ -64,12 +65,14 @@ if __name__ == '__main__':
 
         history = ms.load_history(exp_dict)
 
+
         # Main options
         if args.mode == "test_model":
             results[exp_name] = ms.test_latest_model(exp_dict, verbose=0)
 
         elif args.mode == "train":
             train.train(exp_dict)
+
 
         if args.mode == "copy_models":
             results[exp_name] = ms.copy_models(
@@ -161,4 +164,3 @@ if __name__ == '__main__':
 
         print("saved {}".format(figName))
 
-# per vedere se ha salvato

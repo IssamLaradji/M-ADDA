@@ -5,7 +5,6 @@ from datasets import uspsBig
 from datasets import coxs2v
 
 def get_loader(name, split, batch_size=50):
-
     if name == "mnist":
         return get_mnist(split,batch_size)
 

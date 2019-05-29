@@ -62,15 +62,19 @@ def center_loss(tgt_model, batch, src_model, src_centers, tgt_centers,
 
 def extract_embeddings(model, dataloader):
     model.eval()
-    n_samples = dataloader.batch_size * len(dataloader)
-    embeddings = np.zeros((n_samples, model.n_outputs))
+    batch_size = dataloader.batch_sampler.num_batches
+    n_samples = batch_size * len(dataloader)
+    n_outputs = model.last.bias.shape[0]
+    embeddings = np.zeros((n_samples, n_outputs))
     labels = np.zeros(n_samples)
     k = 0
 
     for images, target in dataloader:
         with torch.no_grad():
+            if k%5000==0:
+                print(k)
             images = images.cuda()            
-            embeddings[k:k+len(images)] = model.get_embedding(images).data.cpu().numpy()
+            embeddings[k:k+len(images)] = model.forward(images).data.cpu().numpy()
             labels[k:k+len(images)] = target.numpy()
             k += len(images)
 
