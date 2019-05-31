@@ -3,8 +3,10 @@
 import torch.optim as optim
 from torch import nn
 import torch
-
+from torchvision import transforms
 from face_models import load_model
+from  skimage import io, transform
+import numpy as np
 
 
 def get_model(name, n_outputs):
@@ -15,7 +17,7 @@ def get_model(name, n_outputs):
         return model.cuda(), opt
 
     elif name == "disc":
-        model = Discriminator(input_dims=500, hidden_dims=500, output_dims=2)
+        model = Discriminator(input_dims=n_outputs, hidden_dims=500, output_dims=2)
         opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
         return model.cuda(), opt
@@ -48,8 +50,15 @@ class Discriminator(nn.Module):
     def forward(self, input):
         """Forward the discriminator."""
 
+        print(input.size())
+
+        # input = input.to(torch.device('cpu'))
+        # input = transform.resize(input.numpy(), (500, 500))
+        # input = np.reshape(input, (-1, 500, 500))
+        # input = torch.from_numpy(input).to('cuda', dtype=torch.float32)
+
         out = self.layer(input)
-        #out = out.view(out.size()[0], -1)  per errore RuntimeError: size mismatch, m1: [200 x 128], m2: [500 x 500]
+
         return out
 
 

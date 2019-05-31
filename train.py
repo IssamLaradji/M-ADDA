@@ -9,6 +9,10 @@ import pdb
 import torch.nn as nn
 import losses
 from sklearn.cluster import KMeans
+from skimage import io, transform
+import numpy as np
+
+
 
 
 def train(exp_dict):
@@ -19,6 +23,7 @@ def train(exp_dict):
     ####################### 1. Train source model
     src_model, src_opt = ms.load_model_src(exp_dict)
     print(src_model.last.bias.shape[0])
+
     # Train Source
     history = fit_source(src_model, src_opt, src_trainloader, history,
                          exp_dict)
@@ -38,13 +43,19 @@ def train(exp_dict):
     ####################### 2. Train target model
     tgt_trainloader, tgt_valloader = ms.load_tgt_loaders(exp_dict)
 
+
+
     # load models
     tgt_model, tgt_opt, disc_model, disc_opt = ms.load_model_tgt(exp_dict)
     tgt_model.load_state_dict(src_model.state_dict())
 
+
+
     history = fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                          src_trainloader, tgt_trainloader, tgt_valloader,
                          history, exp_dict)
+
+
 
     ms.save_model_tgt(exp_dict, history, tgt_model, tgt_opt, disc_model,
                       disc_opt)
@@ -52,6 +63,7 @@ def train(exp_dict):
     exp_dict["reset_src"] = 0
     exp_dict["reset_tgt"] = 0
     ms.test_latest_model(exp_dict)
+
 
 
 def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
@@ -91,8 +103,12 @@ def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
 def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                src_trainloader, tgt_trainloader, tgt_valloader, history,
                exp_dict):
+    print(range(history["tgt_train"][-1]["epoch"], exp_dict["tgt_epochs"]))
+
     for e in range(history["tgt_train"][-1]["epoch"],
                    exp_dict["tgt_epochs"] + 1):
+
+
         # 1. Train disc
         if exp_dict["options"]["disc"] == True:
             fit_discriminator(
@@ -106,8 +122,12 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 epochs=3,
                 verbose=1)
 
+
+
         acc_tgt = test.validate(src_model, tgt_model, src_trainloader,
                                 tgt_valloader)
+
+
 
         history["tgt_train"] += [{
             "epoch":
@@ -178,6 +198,7 @@ def fit_discriminator(src_model,
             images_src = images_src.cuda()
             images_tgt = images_tgt.cuda()
 
+
             # zero gradients for opt
             opt_disc.zero_grad()
 
@@ -185,6 +206,7 @@ def fit_discriminator(src_model,
             feat_src = src_model.forward(images_src)
             feat_tgt = tgt_model.forward(images_tgt)
             feat_concat = torch.cat((feat_src, feat_tgt), 0)
+
 
             # predict on discriminator
             pred_concat = disc(feat_concat.detach())
@@ -195,8 +217,21 @@ def fit_discriminator(src_model,
             label_concat = torch.cat((label_src, label_tgt), 0).cuda()
 
             # compute loss for disc
+            print('<<<<<<<<<<<<<<<<<<')
+            print(pred_concat.size())
+            print('adesso funziona 0')
+            print(label_concat.size())
+
+            # label_concat = label_concat.to(torch.device('cpu'))
+            # label_concat = transform.resize(label_concat.numpy(), (1, 2))
+            # #label_concat = np.reshape(label_concat, (1, 2))
+            # label_concat = torch.from_numpy(label_concat).to('cuda')
+
+            print(label_concat.size())
+
             loss_disc = criterion(pred_concat, label_concat)
             loss_disc.backward()
+            print('adesso funziona 1')
 
             # optimize disc
             opt_disc.step()
@@ -213,15 +248,17 @@ def fit_discriminator(src_model,
             opt_tgt.zero_grad()
 
             # extract and target features
-            feat_tgt = tgt_model.extforward(images_tgt)
+            feat_tgt = tgt_model.extract_features(images_tgt)
 
             # predict on discriminator
             pred_tgt = disc(feat_tgt)
 
             # prepare fake labels
+
             label_tgt = torch.ones(feat_tgt.size(0)).long().cuda()
 
             # compute loss for target encoder
+
             loss_tgt = criterion(pred_tgt, label_tgt)
             loss_tgt.backward()
 

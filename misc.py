@@ -194,4 +194,8 @@ def load_model_tgt(exp_dict):
     else:
         print("Loading target models from scratch..")
 
+
+    tgt_model.cuda() #modifica Simone
+
+
     return tgt_model, tgt_opt, disc, disc_opt
