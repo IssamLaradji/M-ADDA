@@ -217,9 +217,7 @@ def fit_discriminator(src_model,
             label_concat = torch.cat((label_src, label_tgt), 0).cuda()
 
             # compute loss for disc
-            print('<<<<<<<<<<<<<<<<<<')
             print(pred_concat.size())
-            print('adesso funziona 0')
             print(label_concat.size())
 
             # label_concat = label_concat.to(torch.device('cpu'))
@@ -231,7 +229,7 @@ def fit_discriminator(src_model,
 
             loss_disc = criterion(pred_concat, label_concat)
             loss_disc.backward()
-            print('adesso funziona 1')
+
 
             # optimize disc
             opt_disc.step()
