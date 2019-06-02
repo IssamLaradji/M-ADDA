@@ -114,6 +114,7 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.last = nn.Linear(512 * block.expansion, num_classes)
 
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -180,6 +181,7 @@ def resnet18(pretrained=False, **kwargs):
 
 def resnet34(pretrained=False, **kwargs):
     """Constructs a ResNet-34 model.
+
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet

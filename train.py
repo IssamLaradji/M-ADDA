@@ -22,7 +22,7 @@ def train(exp_dict):
 
     ####################### 1. Train source model
     src_model, src_opt = ms.load_model_src(exp_dict)
-    print(src_model.last.bias.shape[0])
+    #print(src_model.last.bias.shape[0])
 
     # Train Source
     history = fit_source(src_model, src_opt, src_trainloader, history,
@@ -68,7 +68,7 @@ def train(exp_dict):
 
 def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
     # Train Source
-    print( range(history["src_train"][-1]["epoch"], exp_dict["src_epochs"]))
+    #print( range(history["src_train"][-1]["epoch"], exp_dict["src_epochs"]))
     for e in range(history["src_train"][-1]["epoch"], exp_dict["src_epochs"]):
         loss_sum = 0.
         for step, (images, labels) in enumerate(src_trainloader):
@@ -217,15 +217,15 @@ def fit_discriminator(src_model,
             label_concat = torch.cat((label_src, label_tgt), 0).cuda()
 
             # compute loss for disc
-            print(pred_concat.size())
-            print(label_concat.size())
+            #print(pred_concat.size())
+            #print(label_concat.size())
 
             # label_concat = label_concat.to(torch.device('cpu'))
             # label_concat = transform.resize(label_concat.numpy(), (1, 2))
             # #label_concat = np.reshape(label_concat, (1, 2))
             # label_concat = torch.from_numpy(label_concat).to('cuda')
 
-            print(label_concat.size())
+            #print(label_concat.size())
 
             loss_disc = criterion(pred_concat, label_concat)
             loss_disc.backward()
@@ -246,9 +246,13 @@ def fit_discriminator(src_model,
             opt_tgt.zero_grad()
 
             # extract and target features
-            feat_tgt = tgt_model.extract_features(images_tgt)
 
-            # predict on discriminator
+           #feat_tgt = tgt_model.extract_features(images_tgt)
+
+            feat_tgt = tgt_model.forward(images_tgt)
+
+          # predict on discriminator
+
             pred_tgt = disc(feat_tgt)
 
             # prepare fake labels
@@ -265,15 +269,12 @@ def fit_discriminator(src_model,
             
             
             
-            pdb.set_trace()
+            #pdb.set_trace()
             #######################
             # 2.3 print step info #
             #######################
-            if verbose and ((step + 1) % 20 == 0):
-                print("Epoch [{}/{}] - "
-                      "d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(
-                          epoch + 1, epochs, loss_disc.item(), loss_tgt.item(),
-                          acc.item()))
+            if verbose and ((step + 1) % 40 == 0):
+                print("Epoch [{}/{}] - d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(epoch + 1, epochs, loss_disc.item(), loss_tgt.item(), acc.item()))
 
 
 
@@ -287,7 +288,13 @@ def fit_center(src_model,
     ####################
     # 1. setup network #
     ####################
-    n_classes = tgt_model.n_classes
+    #print(type(tgt_model.last.bias.size()[0]))
+    n_classes = tgt_model.last.bias.size()[0]
+
+
+
+
+
     # set train state for Dropout and BN layers
     src_model.train()
     tgt_model.train()
@@ -304,6 +311,7 @@ def fit_center(src_model,
     src_centers = torch.FloatTensor(src_kmeans.cluster_centers_).cuda()
 
     ####################
+
     # 2. Doing Domain Adaptation#
     ####################
 

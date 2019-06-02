@@ -147,7 +147,10 @@ if __name__ == '__main__':
 
     if args.mode == "plot_tgt":
         pp_main.plot(
-            ylabel="Classifcation Accuracy", xlabel="Epochs", yscale="log")
+
+
+
+ylabel="Classifcation Accuracy", xlabel="Epochs", yscale="log")
 
         path = exp_dict["summary_path"]
         pp_main.fig.tight_layout(rect=[0, 0.03, 1, 0.95])

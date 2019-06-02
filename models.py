@@ -50,7 +50,7 @@ class Discriminator(nn.Module):
     def forward(self, input):
         """Forward the discriminator."""
 
-        print(input.size())
+        #print(input.size())
 
         # input = input.to(torch.device('cpu'))
         # input = transform.resize(input.numpy(), (500, 500))

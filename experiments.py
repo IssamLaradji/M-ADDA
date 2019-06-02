@@ -9,12 +9,12 @@ def get_experiment_dict(args, exp_name):
         if exp_name == "coxs2v":
             exp_dict = {"src_dataset":"coxs2v",
                         "src_model": "resnet18",
-                        "src_epochs":1,
+                        "src_epochs":200,
                         "src_batch_size":64,
 
                         "tgt_dataset": "coxs2v",
                         "tgt_model": "resnet18",
-                        "tgt_epochs":1,
+                        "tgt_epochs":200,
                         "tgt_batch_size":50,
 
                         "options":{"center":True,"disc":True},
