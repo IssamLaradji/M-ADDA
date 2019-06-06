@@ -18,7 +18,8 @@ def get_model(name, n_outputs):
 
     elif name == "disc":
         model = Discriminator(input_dims=n_outputs, hidden_dims=500, output_dims=2)
-        opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
+        # opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
+        opt = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
         return model.cuda(), opt
 
@@ -29,6 +30,13 @@ def get_model(name, n_outputs):
         #                       weight_decay=2e-4)
 
         return model.cuda(), opt
+
+    elif name == 'resnet50':
+        model = load_model("resnet50", embedding_size=n_outputs, imgnet_pretrained=True)
+        opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
+
+        return model.cuda(), opt
+
     else:
         raise Exception('Model {} not supported.'.format(name))
 

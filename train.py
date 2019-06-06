@@ -1,21 +1,30 @@
 import pandas as pd
 import misc as ms
 import test
+
 import torch
-
-
-import pdb
-
 import torch.nn as nn
 import losses
 from sklearn.cluster import KMeans
-from skimage import io, transform
-import numpy as np
+from torchvision import transforms
+from utils import visdom_util
+from dataset_utils import get_coxs2v_testset
+import utils
+from evaluation import Evaluate
+
+fold_tool = utils.FoldGenerator(10, 2, 1)
+train_folds, val_folds, test_folds = fold_tool.get_fold()
 
 
 
 
 def train(exp_dict):
+
+    data_transform = transforms.Compose([
+        transforms.Resize((exp_dict['image_size'], exp_dict['image_size']), interpolation=1),
+        transforms.ToTensor()
+    ])
+
     history = ms.load_history(exp_dict)
     # Source
     src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
@@ -31,11 +40,34 @@ def train(exp_dict):
     #src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
 
     # Test Source
-    src_acc = test.validate(src_model, src_model, src_trainloader,
-                            src_valloader)
+    # src_acc = test.validate(src_model, src_model, src_trainloader,
+    #                         src_valloader)
+
+
+    data_loader = get_coxs2v_testset(exp_dict['still_dir'],
+                                     exp_dict['video1_dir'],
+                                     exp_dict['video1_pairs'],
+                                     test_folds,
+                                     exp_dict["cross_validation_num_fold"],
+                                     data_transform,
+                                     50)
+
+    # CUDA for PyTorch
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
+
+    src_acc = Evaluate(data_loader,
+                       src_model,
+                       device,
+                       0,
+                       nrof_folds=10)
+
     print('Test: validate DONE')
-    print("{} TEST Accuracy = {:2%}\n".format(exp_dict["src_dataset"],
-                                              src_acc))
+    #print("{} TEST Accuracy = {:2%}\n".format(exp_dict["src_dataset"],
+    #                                          src_acc))
+    print("Test Accuracy: \n")
+    print(src_acc)
+
     history["src_acc"] = src_acc
 
     ms.save_model_src(exp_dict, history, src_model, src_opt)
@@ -92,6 +124,8 @@ def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
         print("Source ({}) - Epoch [{}/{}] - loss={:.2f}".format(
             type(src_trainloader).__name__, e, exp_dict["src_epochs"], loss))
 
+        visdom_util.plotter.plot('loss', 'train', 'Class Loss', e, loss)
+
         history["src_train"] += [{"loss": loss, "epoch": e}]
 
         if e % 50 == 0:
@@ -111,7 +145,7 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
 
         # 1. Train disc
         if exp_dict["options"]["disc"] == True:
-            fit_discriminator(
+            loss_tgt, loss_disc = fit_discriminator(
                 src_model,
                 tgt_model,
                 disc_model,
@@ -121,6 +155,8 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 opt_disc=disc_opt,
                 epochs=3,
                 verbose=1)
+            visdom_util.plotter.plot('tgt_loss', 'tgt_loss', 'Target Loss', e, loss_tgt)
+            visdom_util.plotter.plot('disc_loss', 'disc_loss', 'Discriminator Loss', e, loss_disc)
 
 
 
@@ -184,9 +220,12 @@ def fit_discriminator(src_model,
     ####################
     # 2. train network #
     ####################
-
+    disc_loss  = 0.0
+    tgt_loss = 0.0
     for epoch in range(epochs):
         # zip source and target data pair
+        discLoss = 0.0
+        tgtLoss = 0.0
 
         data_zip = enumerate(zip(src_loader, tgt_loader))
         for step, ((images_src, _), (images_tgt, _)) in data_zip:
@@ -217,18 +256,21 @@ def fit_discriminator(src_model,
             label_concat = torch.cat((label_src, label_tgt), 0).cuda()
 
             # compute loss for disc
-            #print(pred_concat.size())
-            #print(label_concat.size())
 
-            # label_concat = label_concat.to(torch.device('cpu'))
-            # label_concat = transform.resize(label_concat.numpy(), (1, 2))
-            # #label_concat = np.reshape(label_concat, (1, 2))
-            # label_concat = torch.from_numpy(label_concat).to('cuda')
+                #print(pred_concat.size())
+                #print(label_concat.size())
 
-            #print(label_concat.size())
+                # label_concat = label_concat.to(torch.device('cpu'))
+                # label_concat = transform.resize(label_concat.numpy(), (1, 2))
+                # #label_concat = np.reshape(label_concat, (1, 2))
+                # label_concat = torch.from_numpy(label_concat).to('cuda')
+
+                #print(label_concat.size())
 
             loss_disc = criterion(pred_concat, label_concat)
             loss_disc.backward()
+
+            discLoss += loss_disc.item()
 
 
             # optimize disc
@@ -236,6 +278,7 @@ def fit_discriminator(src_model,
 
             pred_cls = torch.squeeze(pred_concat.max(1)[1])
             acc = (pred_cls == label_concat).float().mean()
+
 
             ############################
             # 2.2 train target encoder #
@@ -262,7 +305,9 @@ def fit_discriminator(src_model,
             # compute loss for target encoder
 
             loss_tgt = criterion(pred_tgt, label_tgt)
+            tgtLoss += loss_tgt.item()
             loss_tgt.backward()
+
 
             # optimize target encoder
             opt_tgt.step()
@@ -270,11 +315,17 @@ def fit_discriminator(src_model,
             
             
             #pdb.set_trace()
+
             #######################
             # 2.3 print step info #
             #######################
             if verbose and ((step + 1) % 40 == 0):
                 print("Epoch [{}/{}] - d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(epoch + 1, epochs, loss_disc.item(), loss_tgt.item(), acc.item()))
+
+        disc_loss += discLoss / step
+        tgt_loss += tgtLoss / step
+    return disc_loss / epochs, tgt_loss / epochs
+    #visdom_util.plotter.plot('acc', 'disc_acc', 'Accuracy', epoch, acc)
 
 
 

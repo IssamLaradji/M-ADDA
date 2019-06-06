@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+import tqdm
 
 from itertools import combinations
 
@@ -70,10 +71,10 @@ def extract_embeddings(model, dataloader):
     labels = np.zeros(n_samples)
     k = 0
 
-    for images, target in dataloader:
+    print('Extracting features.')
+    tbar = tqdm.tqdm(dataloader)
+    for images, target in tbar:
         with torch.no_grad():
-            if k%10000==0:
-                print(k)
             images = images.cuda()            
             embeddings[k:k+len(images)] = model.forward(images).data.cpu().numpy()
             labels[k:k+len(images)] = target.numpy()

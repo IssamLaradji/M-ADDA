@@ -110,8 +110,8 @@ def load_tgt_loaders(exp_dict):
 
 
 def load_history(exp_dict):
-    name_history = exp_dict["path"] + "/history.json"
-
+    name_history = os.path.join(exp_dict["path"], "history.json")
+    # name_history = exp_dict["path"] + "/history.json"
     if not os.path.exists(name_history) or (exp_dict["reset_src"]
                                             and exp_dict["reset_tgt"]):
         history = {"src_train": [{"epoch": 0}]}
@@ -131,14 +131,23 @@ def load_history(exp_dict):
 
 
 def save_model_src(exp_dict, history, model_src, opt_src):
-    save_json(exp_dict["path"] + "/history.json", history)
-    torch.save(model_src.state_dict(), exp_dict["path"] + "/model_src.pth")
-    torch.save(opt_src.state_dict(), exp_dict["path"] + "/opt_src.pth")
+    name_path1 = os.path.join(exp_dict["path"], "history.json")
+    name_path2_ = os.path.join(exp_dict["path"], "model_src.pth")
+    name_path3 = os.path.join(exp_dict["path"], "opt_src.pth")
+
+    save_json(name_path1, history)
+    torch.save(model_src.state_dict(), name_path2_)
+    torch.save(opt_src.state_dict(), name_path3)
+
+    #save_json(exp_dict["path"] + "/history.json", history)
+    #torch.save(model_src.state_dict(), exp_dict["path"] + "/model_src.pth")
+    #torch.save(opt_src.state_dict(), exp_dict["path"] + "/opt_src.pth")
     print("Saved Source...")
 
 
 def save_model_tgt(exp_dict, history, model_tgt, opt_tgt, disc, disc_opt):
-    save_json(exp_dict["path"] + "/history.json", history)
+    save_json(os.path.join(exp_dict["path"], "history.json"), history)
+    #save_json(exp_dict["path"] + "/history.json", history)
     torch.save(model_tgt.state_dict(), exp_dict["path"] + "/model_tgt.pth")
     torch.save(opt_tgt.state_dict(), exp_dict["path"] + "/opt_tgt.pth")
 
@@ -155,8 +164,13 @@ def load_model_src(exp_dict):
     name_opt = exp_dict["path"] + "/opt_src.pth"
 
     if os.path.exists(name_model) and not exp_dict["reset_src"]:
+
         src_model.load_state_dict(torch.load(name_model))
         src_opt.load_state_dict(torch.load(name_opt))
+
+         #checkpoint = torch.load(name_model)
+         #src_model.load_state_dict(checkpoint['model_state_dict'])
+
         print("Loading saved {}".format(name_model))
 
     else:

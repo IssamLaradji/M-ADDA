@@ -1,56 +1,19 @@
+
 import os
 import numpy as np
+import tqdm
 
 from PIL import Image
-from torch.utils.data import Dataset
-from torch.utils.data.sampler import BatchSampler
-from torchvision import datasets, transforms
+import torch
+from torch.utils import data
+from torchvision import transforms, datasets
 from torchvision.datasets.folder import default_loader
-from random import sample
-import multiprocessing as mp
 
-class Random_BalancedBatchSampler(BatchSampler):
-    r"""Samples elements sequentially, always in the same order.
+from .sampler import Random_BalancedBatchSampler
 
-    Arguments:
-        data_source (Dataset): dataset to sample from
-    """
+import utils
 
-    def __init__(self, data_source: datasets.ImageFolder, num_classes_per_batch: int, samples_per_class: int,
-                 max_batches: int=None):
-
-        self.data_source = data_source
-        self.num_classes_per_batch = num_classes_per_batch
-        self.samples_per_class = samples_per_class
-        self.max_batches = max_batches
-
-        if self.num_classes_per_batch > len(self.data_source.classes):
-            raise ValueError('Trying to sample {} classes in a dataset with {} classes.'.format(
-                self.num_classes_per_batch, len(self.data_source.classes)))
-
-        self.num_batches = len(self.data_source.samples) // (self.num_classes_per_batch * self.samples_per_class)
-
-        self.sample_idxs = np.arange(len(self.data_source.samples))
-        self.targets = np.array(self.data_source.targets)
-        self.classes = np.array(list(self.data_source.class_to_idx.values()))
-        self.class_samples = {i: self.sample_idxs[self.targets == i] for i in self.classes}
-
-    def __iter__(self):
-        batches = []
-        for i in range(min(self.num_batches, self.max_batches)):
-            batch = []
-            chosen_classes_idx = np.random.choice(self.classes, self.num_classes_per_batch, replace=False)
-            for i in chosen_classes_idx:
-                batch.append(np.random.choice(self.class_samples[i], self.samples_per_class, replace=False))
-            batches.append(np.concatenate(batch))
-
-        return iter(batches)
-
-    def __len__(self):
-        return min(self.num_batches, self.max_batches)
-
-
-class PairsDataset(Dataset):
+class PairsDataset(data.Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self,
@@ -62,13 +25,15 @@ class PairsDataset(Dataset):
         self.pair_file = pair_file
         self.transform = transform
 
-        self.pairs, self.issame = Get_Pairs(pair_file, data_source)
+        self.pairs, self.issame = utils.Get_Pairs(pair_file, data_source)
 
         self.preloaded = False
         if preload:
+            print('Preload images')
             self.images = {}
             uniques = np.unique(np.array(self.pairs))
-            for path in uniques:
+            tbar = tqdm.tqdm(uniques)
+            for path in tbar:
                 img = Image.open(path)
                 self.images[path] = img.copy()
             self.preloaded = True
@@ -100,8 +65,7 @@ class PairsDataset(Dataset):
 
         return [img1, img2], self.issame[idx], [self.pairs[idx][0], self.pairs[idx][1]]
 
-
-class PairsDatasetS2V(Dataset):
+class PairsDatasetS2V(data.Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self,
@@ -120,7 +84,7 @@ class PairsDatasetS2V(Dataset):
         self.pair_file = pair_file
         self.transform = transform
 
-        self.subject_list, self.nb_folds = self._get_subject_list()
+        self.subject_list, self.nb_folds = utils.get_subject_list(pair_file)
         self.nb_subject = len(self.subject_list)
         self.nb_subject_per_fold = self.nb_subject // self.nb_folds
         if num_folds != self.nb_folds:
@@ -128,7 +92,10 @@ class PairsDatasetS2V(Dataset):
         if max(fold_list) > self.nb_folds:
             raise Exception('Fold number {} is out of range. Maximum number of fold is {}.'.format(max(fold_list), self.nb_folds))
 
-        self.pairs, self.issame = self._get_pairs_from_fold(fold_list)
+        self.pairs, self.issame = utils.get_pairs_from_fold(still_source,
+                                                            video_source,
+                                                            pair_file,
+                                                            self.subject_list)
 
         self.preloaded = False
         if preload:
@@ -165,171 +132,126 @@ class PairsDatasetS2V(Dataset):
 
         return [img1, img2], self.issame[idx], [self.pairs[idx][0], self.pairs[idx][1]]
 
-    # Set up for evaluation
-    def _get_pairs_from_fold(self,
-                  fold_list):
-        nrof_skipped_pairs = 0
-        path_list = []
-        issame_list = []
+class DatasetS2V(data.Dataset):
+    """Face Landmarks dataset."""
 
-        fold_subject_list = self._extract_fold_list(fold_list)
+    def __init__(self,
+                 still_source: str,
+                 video_source: str,
+                 pair_file: str,
+                 transform: transforms,
+                 fold_list: list,
+                 num_folds: int=10,
+                 preload: bool=False,
+                 video_only: bool=False):
 
-        pairs = []
-        with open(self.pair_file, 'r') as f:
-            for line in f.readlines()[1:]:
-                pair = line.strip().split()
-                pairs.append(pair)
 
-        for pair in pairs:
-            if pair[0] in fold_subject_list:
-                if len(pair) == 3:
 
-                    path0 = add_extension(
-                        os.path.join(self.still_source, pair[0] + '_' + '%04d' % int(pair[1])))
-                    path1 = add_extension(
-                        os.path.join(self.video_source, pair[0], pair[0] + '_' + '%d' % int(pair[2])))
-                    issame = True
+        self.still_source = still_source
+        self.video_source = video_source
+        self.pair_file = pair_file
+        self.transform = transform
 
-                    if os.path.exists(path0) and os.path.exists(path1):  # Only add the pair if both paths exist
-                        path_list.append([path0, path1])
-                        issame_list.append(issame)
-                    else:
-                        nrof_skipped_pairs += 1
+        self.subject_list, self.nb_folds = utils.get_subject_list(pair_file)
+        self.nb_subject = len(self.subject_list)
+        self.nb_subject_per_fold = self.nb_subject // self.nb_folds
+        if num_folds != self.nb_folds:
+            raise Exception('There are {} folds in pair file. Marked {} folds.'.format(self.nb_folds, num_folds))
+        if max(fold_list) > self.nb_folds:
+            raise Exception('Fold number {} is out of range. Maximum number of fold is {}.'.format(max(fold_list), self.nb_folds))
 
-                elif len(pair) == 4:
+        subject_set = utils.extract_fold_list(fold_list, self.subject_list, self.nb_subject_per_fold)
+        class_to_idx = {}
+        for class_idx, subject in enumerate(subject_set):
+            class_to_idx[subject] = class_idx
 
-                    path0 = add_extension(
-                        os.path.join(self.still_source, pair[0] + '_' + '%04d' % int(pair[1])))
-                    path1 = add_extension(
-                        os.path.join(self.video_source, pair[2], pair[2] + '_' + '%d' % int(pair[3])))
-                    issame = False
+        samples = []
+        stillclass_to_sampleidx = {}
+        for i, subject in enumerate(subject_set):
+            subject_video_path = os.path.join(self.video_source, subject)
+            video_image_paths = utils.get_image_paths(subject_video_path)
 
-                    if os.path.exists(path0) and os.path.exists(path1):  # Only add the pair if both paths exist
-                        path_list.append([path0, path1])
-                        issame_list.append(issame)
-                    else:
-                        nrof_skipped_pairs += 1
+            still_image_path = os.path.join(self.still_source, subject + '_0000.JPG')
+            if not os.path.isfile(still_image_path):
+                raise Exception('Still image not found at {}'.format(still_image_path))
 
-        if nrof_skipped_pairs > 0:
-            print('Skipped %d image pairs' % nrof_skipped_pairs)
+            if video_only:
+                paths = video_image_paths
+            else:
+                paths = [still_image_path] + video_image_paths
 
-        return path_list, issame_list
+            # (class_idx, sample_idx)
+            stillclass_to_sampleidx[class_to_idx[subject]] = len(samples)
 
-    def _get_subject_list(self):
+            for path in paths:
+                item = (path, class_to_idx[subject])
+                samples.append(item)
 
-        subject_list = []
+        self.stillclass_to_sampleidx = stillclass_to_sampleidx
 
-        with open(self.pair_file, 'r') as f:
+        self.classes = subject_set
+        self.class_to_idx = class_to_idx
+        self.samples = samples
+        self.targets = [s[1] for s in samples]
 
-            nb_fold = f.readline().split('\t')[0]
-
-            for line in f.readlines()[1:]:
-                pair = line.strip().split()
-
-                if len(pair) == 3:
-                    if pair[0] not in subject_list:
-                        subject_list.append(pair[0])
-
-        return subject_list, int(nb_fold)
-
-    def _extract_fold_list(self, fold_list):
-
-        list = []
-        for fold in fold_list:
-            upper_idx = fold * self.nb_subject_per_fold + self.nb_subject_per_fold
-            lower_idx = fold * self.nb_subject_per_fold
-            list += self.subject_list[lower_idx: upper_idx]
-
-        return list
-
-class BalancedBatchSampler(BatchSampler):
-    """
-    BatchSampler - from a MNIST-like dataset, samples n_classes and within these classes samples n_samples.
-    Returns batches of size n_classes * n_samples
-    """
-
-    def __init__(self, labels, n_classes, n_samples):
-        self.labels = labels
-        self.labels_set = list(set(self.labels.numpy()))
-        self.label_to_indices = {label: np.where(self.labels.numpy() == label)[0]
-                                 for label in self.labels_set}
-        for l in self.labels_set:
-            np.random.shuffle(self.label_to_indices[l])
-        self.used_label_indices_count = {label: 0 for label in self.labels_set}
-        self.count = 0
-        self.n_classes = n_classes
-        self.n_samples = n_samples
-        self.n_dataset = len(self.labels)
-        self.batch_size = self.n_samples * self.n_classes
-
-    def __iter__(self):
-        self.count = 0
-        while self.count + self.batch_size < self.n_dataset:
-            classes = np.random.choice(self.labels_set, self.n_classes, replace=False)
-            indices = []
-            for class_ in classes:
-                indices.extend(self.label_to_indices[class_][
-                               self.used_label_indices_count[class_]:self.used_label_indices_count[
-                                                                         class_] + self.n_samples])
-                self.used_label_indices_count[class_] += self.n_samples
-                if self.used_label_indices_count[class_] + self.n_samples > len(self.label_to_indices[class_]):
-                    np.random.shuffle(self.label_to_indices[class_])
-                    self.used_label_indices_count[class_] = 0
-            yield indices
-            self.count += self.n_classes * self.n_samples
+        self.preloaded = False
+        if preload:
+            self.images = {}
+            for path, lbl in self.samples:
+                img = Image.open(path)
+                self.images[path] = img.copy()
+            self.preloaded = True
 
     def __len__(self):
-        return self.n_dataset // self.batch_size
+        return len(self.samples)
 
+    def __getitem__(self, idx):
 
-def add_extension(path):
-    if os.path.exists(path + '.jpg'):
-        return path + '.jpg'
-    if os.path.exists(path + '.JPG'):
-        return path + '.JPG'
-    elif os.path.exists(path + '.png'):
-        return path + '.png'
-    else:
-        raise RuntimeError('No file "%s" with extension png or jpg.' % path)
+        """
+                Args:
+                    index (int): Index
 
+                Returns:
+                    tuple: (sample, target) where target is class_index of the target class.
+                """
 
-def read_pairs(pairs_filename):
-    pairs = []
-    with open(pairs_filename, 'r') as f:
-        for line in f.readlines()[1:]:
-            pair = line.strip().split()
-            pairs.append(pair)
-    return np.array(pairs)
-
-
-# Set up for evaluation
-def Get_Pairs(pairs_path,
-              images_path):
-    nrof_skipped_pairs = 0
-    path_list = []
-    issame_list = []
-
-    pairs = read_pairs(pairs_path)
-
-    path0 = ''
-    path1 = ''
-    issame = False
-
-    for pair in pairs:
-        if len(pair) == 3:
-            path0 = add_extension(os.path.join(images_path, pair[0], pair[1]))
-            path1 = add_extension(os.path.join(images_path, pair[0], pair[2]))
-            issame = True
-        elif len(pair) == 4:
-            path0 = add_extension(os.path.join(images_path, pair[0], pair[1]))
-            path1 = add_extension(os.path.join(images_path, pair[2], pair[3]))
-            issame = False
-        if os.path.exists(path0) and os.path.exists(path1):  # Only add the pair if both paths exist
-            path_list.append([path0, path1])
-            issame_list.append(issame)
+        path, label = self.samples[idx]
+        if self.preloaded:
+            sample = self.images[path]
         else:
-            nrof_skipped_pairs += 1
-    if nrof_skipped_pairs > 0:
-        print('Skipped %d image pairs' % nrof_skipped_pairs)
+            sample = default_loader(path)
 
-    return path_list, issame_list
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample, label
+
+
+def Get_ImageFolderLoader(data_dir,
+                 data_transform,
+                 people_per_batch,
+                 images_per_person):
+
+    train_set = datasets.ImageFolder(data_dir, transform=data_transform)
+
+    batch_sampler = Random_BalancedBatchSampler(train_set,
+                                                people_per_batch,
+                                                images_per_person, max_batches=1000)
+
+    return torch.utils.data.DataLoader(train_set,
+                                       num_workers=8,
+                                       batch_sampler=batch_sampler,
+                                       pin_memory=True)
+
+
+def Get_PairsImageFolderLoader(data_dir,
+                               pairs_file,
+                               data_transform,
+                               batch_size,
+                               preload=False):
+
+    num_workers = 2 if preload else 4
+
+    test_set = PairsDataset(data_dir, pairs_file, transform=data_transform,
+                            preload=preload)
+    return torch.utils.data.DataLoader(test_set, num_workers=num_workers, batch_size=batch_size)

@@ -15,6 +15,8 @@ from addons import vis
 from addons import pretty_plot
 import train
 
+from utils import visdom_util
+
 #per vedere se salva
 
 if __name__ == '__main__':
@@ -41,6 +43,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     ms.set_gpu(args.gpu)
+
+    visdom_util.CreatePlotter()
 
     # init random seed
     # init_random_seed(10)
