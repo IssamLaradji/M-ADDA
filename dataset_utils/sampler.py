@@ -5,9 +5,8 @@ from torch.utils.data import Dataset
 from torch.utils.data.sampler import BatchSampler
 from torchvision import datasets
 from random import sample
-import multiprocessing as mp
 
-import dataset_utils
+from dataset_utils import dataset
 
 class Random_BalancedBatchSampler(BatchSampler):
     r"""Samples elements sequentially, always in the same order.
@@ -60,7 +59,7 @@ class Random_S2VBalancedBatchSampler(BatchSampler):
         data_source (Dataset): dataset to sample from
     """
 
-    def __init__(self, data_source,
+    def __init__(self, data_source: dataset.DatasetS2V,
                  num_classes_per_batch: int,
                  samples_per_class: int,
                  max_batches: int=10000):
@@ -70,29 +69,31 @@ class Random_S2VBalancedBatchSampler(BatchSampler):
         self.samples_per_class = samples_per_class
         self.max_batches = max_batches
 
-        if self.num_classes_per_batch > len(self.data_source.classes):
+        if self.num_classes_per_batch > len(data_source.classes):
             raise ValueError('Trying to sample {} classes in a dataset with {} classes.'.format(
-                self.num_classes_per_batch, len(self.data_source.classes)))
+                self.num_classes_per_batch, len(data_source.classes)))
 
         self.num_batches = len(self.data_source.samples) // (self.num_classes_per_batch * self.samples_per_class)
 
-        self.sample_idxs = np.arange(len(self.data_source.samples))
-        self.targets = np.array(self.data_source.targets)
-        self.classes = np.array(list(self.data_source.class_to_idx.values()))
+        self.sample_idxs = np.arange(len(data_source.samples))
+        self.targets = np.array(data_source.targets)
+        self.classes = np.array(list(data_source.class_to_idx.values()))
         self.class_samples = {i: self.sample_idxs[self.targets == i] for i in self.classes}
+        self.video_only = data_source.video_only
         self.stillclass_to_sampleidx = data_source.stillclass_to_sampleidx
 
     def __iter__(self):
         batches = []
-        for i in range(min(self.num_batches, self.max_batches)):
+        for batch_num in range(min(self.num_batches, self.max_batches)):
             batch = []
             chosen_classes_idx = np.random.choice(self.classes, self.num_classes_per_batch, replace=False)
-            for i in chosen_classes_idx:
-                batch.append(np.random.choice(self.class_samples[i], self.samples_per_class, replace=False))
+            for i, class_idx in enumerate(chosen_classes_idx):
+                batch.append(np.random.choice(self.class_samples[class_idx], self.samples_per_class, replace=False))
 
-                # Add still image if not in batch
-                if not self.stillclass_to_sampleidx[i] in batch[0]:
-                    batch[0][0] = self.stillclass_to_sampleidx[i]
+                if not self.video_only:
+                    # Add still image if not in batch
+                    if not self.stillclass_to_sampleidx[class_idx] in batch[i]:
+                        batch[i][0] = self.stillclass_to_sampleidx[class_idx]
 
             batches.append(np.concatenate(batch))
 

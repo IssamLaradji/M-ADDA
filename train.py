@@ -8,75 +8,117 @@ import losses
 from sklearn.cluster import KMeans
 from torchvision import transforms
 from utils import visdom_util
-from dataset_utils import get_coxs2v_testset
+from dataset_utils import get_coxs2v_testset, get_coxs2v_trainset
 import utils
-from evaluation import Evaluate
+
+
 
 fold_tool = utils.FoldGenerator(10, 2, 1)
 train_folds, val_folds, test_folds = fold_tool.get_fold()
 
 
+train_folds = [3,4,5,6,7,8,9]
+test_folds = [3,4,5,6,7,8,9]
+eval_folds = [3,4,5,6,7,8,9]
+people_per_batch = 20
+images_per_person = 5
 
 
 def train(exp_dict):
+    history = ms.load_history(exp_dict)
 
+    #Simone:
     data_transform = transforms.Compose([
         transforms.Resize((exp_dict['image_size'], exp_dict['image_size']), interpolation=1),
         transforms.ToTensor()
     ])
 
-    history = ms.load_history(exp_dict)
-    # Source
-    src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
-
-    ####################### 1. Train source model
-    src_model, src_opt = ms.load_model_src(exp_dict)
-    #print(src_model.last.bias.shape[0])
-
-    # Train Source
-    history = fit_source(src_model, src_opt, src_trainloader, history,
-                         exp_dict)
-
-    #src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
-
-    # Test Source
-    # src_acc = test.validate(src_model, src_model, src_trainloader,
-    #                         src_valloader)
-
-
-    data_loader = get_coxs2v_testset(exp_dict['still_dir'],
-                                     exp_dict['video1_dir'],
-                                     exp_dict['video1_pairs'],
-                                     test_folds,
-                                     exp_dict["cross_validation_num_fold"],
-                                     data_transform,
-                                     50)
-
     # CUDA for PyTorch
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
 
-    src_acc = Evaluate(data_loader,
-                       src_model,
-                       device,
-                       0,
-                       nrof_folds=10)
+    history = ms.load_history(exp_dict)
 
-    print('Test: validate DONE')
-    #print("{} TEST Accuracy = {:2%}\n".format(exp_dict["src_dataset"],
-    #                                          src_acc))
-    print("Test Accuracy: \n")
-    print(src_acc)
 
+    src_trainloader = get_coxs2v_trainset(exp_dict["still_dir"],
+                                          exp_dict["video1_dir"],
+                                          exp_dict["video1_pairs"],
+                                          train_folds,
+                                          exp_dict["cross_validation_num_fold"],
+                                          data_transform,
+                                          people_per_batch,
+                                          images_per_person,
+                                          video_only=False,
+                                          samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
+                                          div_idx=0)
+
+    src_valloader = get_coxs2v_trainset(exp_dict["still_dir"],
+                                          exp_dict["video1_dir"],
+                                          exp_dict["video1_pairs"],
+                                          train_folds,
+                                          exp_dict["cross_validation_num_fold"],
+                                          data_transform,
+                                          people_per_batch,
+                                          images_per_person,
+                                          video_only=False,
+                                          samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
+                                          div_idx=1) # to change
+
+
+    # Source
+    #src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
+
+
+
+
+
+
+    ####################### 1. Train source model
+    src_model, src_opt = ms.load_model_src(exp_dict)
+
+
+    # Train Source
+    history = fit_source(src_model, src_opt, src_trainloader, history,
+                         exp_dict)
+    # Test Source
+    src_acc = test.validate(src_model, src_model, src_trainloader,
+                            src_valloader)
+
+    print("{} TEST Accuracy = {:2%}\n".format(exp_dict["src_dataset"],
+                                              src_acc))
     history["src_acc"] = src_acc
 
     ms.save_model_src(exp_dict, history, src_model, src_opt)
 
     ####################### 2. Train target model
-    tgt_trainloader, tgt_valloader = ms.load_tgt_loaders(exp_dict)
 
+    #tgt_trainloader, tgt_valloader = ms.load_tgt_loaders(exp_dict)
 
+    tgt_trainloader = get_coxs2v_trainset(exp_dict["still_dir"],
+                                          exp_dict["video2_dir"],
+                                          exp_dict["video2_pairs"],
+                                          train_folds,
+                                          exp_dict["cross_validation_num_fold"],
+                                          data_transform,
+                                          people_per_batch,
+                                          images_per_person,
+                                          video_only=False,
+                                          samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
+                                          div_idx=0)
 
+    tgt_valloader = get_coxs2v_trainset(exp_dict["still_dir"],
+                                          exp_dict["video2_dir"],
+                                          exp_dict["video2_pairs"],
+                                          train_folds,
+                                          exp_dict["cross_validation_num_fold"],
+                                          data_transform,
+                                          people_per_batch,
+                                          images_per_person,
+                                          video_only=False,
+                                          samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
+                                          div_idx=1) #to change
+
+    print('quello che aggiunto funziona')
     # load models
     tgt_model, tgt_opt, disc_model, disc_opt = ms.load_model_tgt(exp_dict)
     tgt_model.load_state_dict(src_model.state_dict())
@@ -157,7 +199,6 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 verbose=1)
             visdom_util.plotter.plot('tgt_loss', 'tgt_loss', 'Target Loss', e, loss_tgt)
             visdom_util.plotter.plot('disc_loss', 'disc_loss', 'Discriminator Loss', e, loss_disc)
-
 
 
         acc_tgt = test.validate(src_model, tgt_model, src_trainloader,
@@ -383,3 +424,27 @@ def fit_center(src_model,
             # optimize source classifier
             loss.backward()
             opt_tgt.step()
+
+    # Evaluation
+
+# video1_test_loader = get_coxs2v_testset(exp_dict['still_dir'],
+#                                  exp_dict['video1_dir'],
+#                                  exp_dict['video1_pairs'],
+#                                  test_folds,
+#                                  exp_dict["cross_validation_num_fold"],
+#                                  data_transform,
+#                                  50)
+#
+# video2_test_loader = get_coxs2v_testset(exp_dict['still_dir'],
+#                                         exp_dict['video2_dir'],
+#                                         exp_dict['video2_pairs'],
+#                                         test_folds,
+#                                         exp_dict["cross_validation_num_fold"],
+#                                         data_transform,
+#                                         50)
+#
+# src_acc = Evaluate(video1_test_loader,
+#                    src_model,
+#                    device,
+#                    0,
+#                    nrof_folds=10)

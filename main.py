@@ -17,7 +17,6 @@ import train
 
 from utils import visdom_util
 
-#per vedere se salva
 
 if __name__ == '__main__':
 
