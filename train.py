@@ -62,15 +62,11 @@ def train(exp_dict):
                                           images_per_person,
                                           video_only=False,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
-                                          div_idx=1) # to change
+                                          div_idx=1)
 
 
     # Source
     #src_trainloader, src_valloader = ms.load_src_loaders(exp_dict)
-
-
-
-
 
 
     ####################### 1. Train source model
@@ -116,9 +112,9 @@ def train(exp_dict):
                                           images_per_person,
                                           video_only=False,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
-                                          div_idx=1) #to change
+                                          div_idx=1)
 
-    print('quello che aggiunto funziona')
+
     # load models
     tgt_model, tgt_opt, disc_model, disc_opt = ms.load_model_tgt(exp_dict)
     tgt_model.load_state_dict(src_model.state_dict())
@@ -195,7 +191,7 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 tgt_trainloader,
                 opt_tgt=tgt_opt,
                 opt_disc=disc_opt,
-                epochs=3,
+                epochs=200,
                 verbose=1)
             visdom_util.plotter.plot('tgt_loss', 'tgt_loss', 'Target Loss', e, loss_tgt)
             visdom_util.plotter.plot('disc_loss', 'disc_loss', 'Discriminator Loss', e, loss_disc)
