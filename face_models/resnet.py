@@ -164,7 +164,8 @@ class ResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.last(x)
 
-        return F.normalize(x, p=2, dim=1)
+        # return F.normalize(x, p=2, dim=1)
+        return x
 
 
 def resnet18(pretrained=False, **kwargs):

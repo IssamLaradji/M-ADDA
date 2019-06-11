@@ -10,10 +10,10 @@ def get_experiment_dict(args, exp_name):
 
         if exp_name == "coxs2v":
             exp_dict = {"still_dir": "/export/livia/data/lemoineh/COX-S2V/COX-S2V-Still-MTCNN160",
-                        "video1_dir": "/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video1",
-                        "video2_dir": "/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video2",
-                        "video1_pairs": "dataset_utils/pair_files/coxs2v/video1_pairs.txt",
-                        "video2_pairs": "dataset_utils/pair_files/coxs2v/video2_pairs.txt",
+                        "video1_dir": "/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video2",
+                        "video2_dir": "/export/livia/data/lemoineh/COX-S2V/COX-S2V-Video-MTCNN160/video4",
+                        "video1_pairs": "dataset_utils/pair_files/coxs2v/video2_pairs.txt",
+                        "video2_pairs": "dataset_utils/pair_files/coxs2v/video4_pairs.txt",
                         "cross_validation_num_fold": 10,
                         "image_size": 160,
                         "src_dataset": "coxs2v",

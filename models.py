@@ -18,15 +18,15 @@ def get_model(name, n_outputs):
 
     elif name == "disc":
         model = Discriminator(input_dims=n_outputs, hidden_dims=500, output_dims=2)
-        # opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
-        opt = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+        opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
+        # opt = optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
         return model.cuda(), opt
 
     elif name == 'resnet18':
         model = load_model("resnet18", embedding_size=n_outputs, imgnet_pretrained=True)
         opt = torch.optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.9))
-        # src_opt = optim.SGD(src_model.parameters(), lr=0.05, momentum=0.9, nesterov=True,
+        # opt = optim.SGD(model.parameters(), lr=0.05, momentum=0.9, nesterov=True,
         #                       weight_decay=2e-4)
 
         return model.cuda(), opt

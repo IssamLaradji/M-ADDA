@@ -23,6 +23,19 @@ eval_folds = [3,4,5,6,7,8,9]
 people_per_batch = 20
 images_per_person = 5
 
+def compare_models(model_1, model_2):
+    models_differ = 0
+    for key_item_1, key_item_2 in zip(model_1.state_dict().items(), model_2.state_dict().items()):
+        if torch.equal(key_item_1[1], key_item_2[1]):
+            pass
+        else:
+            models_differ += 1
+            if (key_item_1[0] == key_item_2[0]):
+                print('Mismtach found at', key_item_1[0])
+            else:
+                raise Exception
+    if models_differ == 0:
+        print('Models match perfectly! :)')
 
 def train(exp_dict):
     history = ms.load_history(exp_dict)
@@ -48,7 +61,7 @@ def train(exp_dict):
                                           data_transform,
                                           people_per_batch,
                                           images_per_person,
-                                          video_only=False,
+                                          video_only=True,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
                                           div_idx=0)
 
@@ -60,7 +73,7 @@ def train(exp_dict):
                                           data_transform,
                                           people_per_batch,
                                           images_per_person,
-                                          video_only=False,
+                                          video_only=True,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
                                           div_idx=1)
 
@@ -98,7 +111,7 @@ def train(exp_dict):
                                           data_transform,
                                           people_per_batch,
                                           images_per_person,
-                                          video_only=False,
+                                          video_only=True,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
                                           div_idx=0)
 
@@ -110,7 +123,7 @@ def train(exp_dict):
                                           data_transform,
                                           people_per_batch,
                                           images_per_person,
-                                          video_only=False,
+                                          video_only=True,
                                           samples_division_list=[0.6, 0.4],  # [0.6, 0.4]
                                           div_idx=1)
 
@@ -118,7 +131,6 @@ def train(exp_dict):
     # load models
     tgt_model, tgt_opt, disc_model, disc_opt = ms.load_model_tgt(exp_dict)
     tgt_model.load_state_dict(src_model.state_dict())
-
 
 
     history = fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
@@ -162,8 +174,6 @@ def fit_source(src_model, src_opt, src_trainloader, history, exp_dict):
         print("Source ({}) - Epoch [{}/{}] - loss={:.2f}".format(
             type(src_trainloader).__name__, e, exp_dict["src_epochs"], loss))
 
-        visdom_util.plotter.plot('loss', 'train', 'Class Loss', e, loss)
-
         history["src_train"] += [{"loss": loss, "epoch": e}]
 
         if e % 50 == 0:
@@ -182,6 +192,7 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
 
 
         # 1. Train disc
+        print('Fit discriminator.')
         if exp_dict["options"]["disc"] == True:
             loss_tgt, loss_disc = fit_discriminator(
                 src_model,
@@ -191,7 +202,6 @@ def fit_target(src_model, tgt_model, tgt_opt, disc_model, disc_opt,
                 tgt_trainloader,
                 opt_tgt=tgt_opt,
                 opt_disc=disc_opt,
-                epochs=200,
                 verbose=1)
             visdom_util.plotter.plot('tgt_loss', 'tgt_loss', 'Target Loss', e, loss_tgt)
             visdom_util.plotter.plot('disc_loss', 'disc_loss', 'Discriminator Loss', e, loss_disc)
@@ -246,9 +256,10 @@ def fit_discriminator(src_model,
                       tgt_loader,
                       opt_tgt,
                       opt_disc,
-                      epochs=200,
+                      epochs=5,
                       verbose=1):
-    tgt_model.train()
+
+    src_model.eval()
     disc.train()
 
     # setup criterion and opt
@@ -270,19 +281,22 @@ def fit_discriminator(src_model,
             # 2.1 train discriminator #
             ###########################
 
+            tgt_model.eval()
+
             # make images variable
             images_src = images_src.cuda()
             images_tgt = images_tgt.cuda()
-
 
             # zero gradients for opt
             opt_disc.zero_grad()
 
             # extract and concat features
-            feat_src = src_model.forward(images_src)
-            feat_tgt = tgt_model.forward(images_tgt)
-            feat_concat = torch.cat((feat_src, feat_tgt), 0)
+            # compare_models(src_model, tgt_model)
 
+            with torch.no_grad():
+                feat_src = src_model.forward(images_src)
+                feat_tgt = tgt_model.forward(images_tgt)
+                feat_concat = torch.cat((feat_src, feat_tgt), 0)
 
             # predict on discriminator
             pred_concat = disc(feat_concat.detach())
@@ -293,22 +307,10 @@ def fit_discriminator(src_model,
             label_concat = torch.cat((label_src, label_tgt), 0).cuda()
 
             # compute loss for disc
-
-                #print(pred_concat.size())
-                #print(label_concat.size())
-
-                # label_concat = label_concat.to(torch.device('cpu'))
-                # label_concat = transform.resize(label_concat.numpy(), (1, 2))
-                # #label_concat = np.reshape(label_concat, (1, 2))
-                # label_concat = torch.from_numpy(label_concat).to('cuda')
-
-                #print(label_concat.size())
-
             loss_disc = criterion(pred_concat, label_concat)
             loss_disc.backward()
 
             discLoss += loss_disc.item()
-
 
             # optimize disc
             opt_disc.step()
@@ -317,22 +319,22 @@ def fit_discriminator(src_model,
             acc = (pred_cls == label_concat).float().mean()
 
 
+
+
             ############################
             # 2.2 train target encoder #
             ############################
+
+            tgt_model.train()
 
             # zero gradients for opt
             opt_disc.zero_grad()
             opt_tgt.zero_grad()
 
             # extract and target features
-
-           #feat_tgt = tgt_model.extract_features(images_tgt)
-
             feat_tgt = tgt_model.forward(images_tgt)
 
-          # predict on discriminator
-
+            # predict on discriminator
             pred_tgt = disc(feat_tgt)
 
             # prepare fake labels
@@ -356,8 +358,16 @@ def fit_discriminator(src_model,
             #######################
             # 2.3 print step info #
             #######################
+
             if verbose and ((step + 1) % 40 == 0):
+                # compare_models(src_model, tgt_model)
+                # print(
+                #     "Epoch [{}/{}] - d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(epoch + 1, epochs, loss_disc.item(),
+                #                                                                     0.0, acc.item()))
                 print("Epoch [{}/{}] - d_loss={:.5f} g_loss={:.5f} acc={:.5f}".format(epoch + 1, epochs, loss_disc.item(), loss_tgt.item(), acc.item()))
+
+        visdom_util.plotter.plot('d_loss', 'train', 'Discriminator Loss', loss_disc.item(), epoch)
+        visdom_util.plotter.plot('Accuracy', 'train', 'Discriminator Accuracy', loss_disc.item(), epoch)
 
         disc_loss += discLoss / step
         tgt_loss += tgtLoss / step

@@ -22,7 +22,7 @@ class VisdomLinePlotter(object):
             self.plots[var_name] = self.viz.line(X=np.array([x,x]), Y=np.array([y,y]), env=self.env, opts=dict(
                 legend=[split_name],
                 title=title_name,
-                xlabel='Epochs',
+                xlabel='step',
                 ylabel=var_name
             ))
         else:

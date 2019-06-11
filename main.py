@@ -17,7 +17,7 @@ import train
 
 from utils import visdom_util
 
-#10/06
+#11/06
 
 if __name__ == '__main__':
 
