@@ -12,9 +12,15 @@ def validate(src_model, tgt_model, src_data_loader, tgt_data_loader):
 
         clf = neighbors.KNeighborsClassifier(n_neighbors=2)
         clf.fit(X, y)
+
+        Xtest = Xtest
+        ytest = ytest
+
+        # Xtest = Xtest[:1000]
+        # ytest = ytest[:1000]
         y_pred = clf.predict(Xtest)
 
         acc = (y_pred == ytest).mean()
-        # print(acc)
+        # print("Accuracy: {}".format(acc))
 
     return acc

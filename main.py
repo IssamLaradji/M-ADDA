@@ -15,6 +15,10 @@ from addons import vis
 from addons import pretty_plot
 import train
 
+from utils import visdom_util
+
+#11/06
+
 if __name__ == '__main__':
 
     # SEE IF CUDA IS AVAILABLE
@@ -40,6 +44,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ms.set_gpu(args.gpu)
 
+    visdom_util.CreatePlotter()
+
     # init random seed
     # init_random_seed(10)
     results = {}
@@ -51,7 +57,6 @@ if __name__ == '__main__':
         yscale="linear",
         subplots=(1, 1),
         shareRowLabel=True)
-
     for exp_name in args.expList:
         exp_dict = experiments.get_experiment_dict(args, exp_name)
         exp_dict["reset_src"] = args.reset_src
@@ -64,12 +69,14 @@ if __name__ == '__main__':
 
         history = ms.load_history(exp_dict)
 
+
         # Main options
         if args.mode == "test_model":
             results[exp_name] = ms.test_latest_model(exp_dict, verbose=0)
 
         elif args.mode == "train":
             train.train(exp_dict)
+
 
         if args.mode == "copy_models":
             results[exp_name] = ms.copy_models(
@@ -144,7 +151,10 @@ if __name__ == '__main__':
 
     if args.mode == "plot_tgt":
         pp_main.plot(
-            ylabel="Classifcation Accuracy", xlabel="Epochs", yscale="log")
+
+
+
+ylabel="Classifcation Accuracy", xlabel="Epochs", yscale="log")
 
         path = exp_dict["summary_path"]
         pp_main.fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -160,3 +170,4 @@ if __name__ == '__main__':
         pp_main.fig.savefig(figName, dpi=600)
 
         print("saved {}".format(figName))
+

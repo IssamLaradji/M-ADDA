@@ -45,8 +45,11 @@ class MNIST(data.Dataset):
 def get_mnist(split, batch_size=50):
     """Get MNIST dataset loader."""
     # image pre-processing
+    # pre_process = transforms.Compose(
+    #     [transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+
     pre_process = transforms.Compose(
-        [transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+        [transforms.Normalize(mean=[0.5], std=[0.5])])
 
     # dataset and data loader
     mnist_dataset = MNIST(split=split, transform=pre_process)

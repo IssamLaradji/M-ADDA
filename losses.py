@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+import tqdm
 
 from itertools import combinations
 
@@ -32,9 +33,10 @@ def center_loss(tgt_model, batch, src_model, src_centers, tgt_centers,
 
     #f_N = embeddings_adv[triplets[:, 2]]
 
-    f_N_clf = tgt_model.convnet(batch["X"].cuda()).view(batch["X"].shape[0], -1)
-    f_N = tgt_model.fc(f_N_clf.detach())
-    
+    f_N_clf = tgt_model.forward(batch["X"].cuda()).view(batch["X"].shape[0], -1) #AttributeError: 'ResNet' object has no attribute 'convnet'
+
+    #f_N = tgt_model.fc(f_N_clf.detach())
+    f_N = f_N_clf
     #est.predict(f_N.cpu().numpy())
     y_src = src_kmeans.predict(f_N.detach().cpu().numpy())
     #ap_distances = (emb_centers[None] - f_N[:,None]).pow(2).min(1)[0].sum(1)
@@ -61,16 +63,20 @@ def center_loss(tgt_model, batch, src_model, src_centers, tgt_centers,
 ### Triplets Utils
 
 def extract_embeddings(model, dataloader):
+
     model.eval()
-    n_samples = dataloader.batch_size * len(dataloader)
-    embeddings = np.zeros((n_samples, model.n_outputs))
+    n_samples = len(dataloader.dataset) - len(dataloader.dataset) % 100
+    n_outputs = model.last.bias.shape[0]
+    embeddings = np.zeros((n_samples, n_outputs))
     labels = np.zeros(n_samples)
     k = 0
 
-    for images, target in dataloader:
-        with torch.no_grad():
-            images = images.cuda()            
-            embeddings[k:k+len(images)] = model.get_embedding(images).data.cpu().numpy()
+    print('Extracting features.')
+    tbar = tqdm.tqdm(dataloader)
+    with torch.no_grad():
+        for images, target in tbar:
+            images = images.cuda()
+            embeddings[k:k+len(images)] = model.forward(images).data.cpu().numpy()
             labels[k:k+len(images)] = target.numpy()
             k += len(images)
 
